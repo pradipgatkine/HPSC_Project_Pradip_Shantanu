@@ -1,6 +1,11 @@
+//To set number of threads, in terminal: export OMP_NUM_THREADS=8
+//Reference: https://computing.llnl.gov/tutorials/openMP/samples/C/omp_hello.c
+//To compile: gcc -fopenmp HPSC_openmp.c
 #include <stdio.h>
 #include <stdlib.h>
-
+#include <omp.h>
+#include <malloc.h>
+#include <time.h>
 double max(double a, double b, double c){
 	double ans=a;
 	if (ans<b){
@@ -79,6 +84,7 @@ int main(){
 	    // X mom GS
 	    for (u_no=1;u_no<6;u_no++){
 	    	for (i=1;i<Ny-1;i++){ 
+	    		#pragma omp parallel for private(j)
 				for (j=1;j<Nx-2;j++){
 					delx_e=delta_x;
 	                delx_w=delta_x;
@@ -106,7 +112,8 @@ int main(){
 	                Ap_u[i][j]=ap_u;
 	                if (ap_u==0){//This is just error condition, put to avoid division by zero
 	                	printf("Error: ap_u is zero %i %i \n",i,j);
-	                	goto end;
+	                	//break;
+	                	//goto end;
 	                }
 	                u[i][j]=rel_u*(ae_u*u[i][j+1]+aw_u*u[i][j-1]+an_u*u[i-1][j]+as_u*u[i+1][j]+(p[i-1][j-1]-p[i-1][j])*delta_y)/ap_u+(1-rel_u)*u[i][j];
 				}
@@ -143,7 +150,8 @@ int main(){
 	                Ap_v[i][j]=ap_v;
 	                if (ap_v==0){//This is just error condition, put to avoid division by zero
 	                	printf("Error: ap_v is zero %i %i \n",i,j);	                
-	                	goto end;
+	                	//goto end;
+	                	break;
 	                }
 	                v[i][j]=rel_v*(ae_v*v[i][j+1]+aw_v*v[i][j-1]+an_v*v[i-1][j]+as_v*v[i+1][j]+(p[i][j-1]-p[i-1][j-1])*delta_x)/ap_v+(1-rel_v)*v[i][j];
 				}
@@ -160,6 +168,8 @@ int main(){
 				}
 			}
 		}
+		printf("Current value: %f ", max_b);
+		printf("Will stop when the value is <=%f ",converge);
 		printf("Iteration no.: %i\n", count);
 		if (max_b<converge){//Convergence Criterion
 			break;
@@ -249,6 +259,26 @@ int main(){
         }
 	}
 	printf("Total Number of Iterations: %i\n", count);
+	/*FILE *fp;
+    fp = fopen("u_velocity.txt", "w+");
+	for (i=0;i<Ny;i++){
+		for (j=0;j<Nx-1;j++){
+			fprintf(fp,"%f ", u[i][j]);
+		}
+		fprintf(fp,"\n");
+	}
+    fclose(fp);
+    fp = fopen("v_velocity.txt", "w+");
+	for (i=0;i<Ny-1;i++){
+		for (j=0;j<Nx;j++){
+			fprintf(fp,"%f ", v[i][j]);
+		}
+		fprintf(fp,"\n");
+	}
+	fp = fopen("max_b.txt", "w+");
+	for (i=0;i<count;i++){
+			fprintf(fp,"%f \n", max_b_record[i]);
+	}*/
 	end://Refering to "goto" in X-mom and Y_mom loops; just in case there is error
 		return 0;
 }     
